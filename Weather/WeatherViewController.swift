@@ -43,27 +43,25 @@ class WeatherViewController: UIViewController {
         super.viewDidLoad()
         
         configureBindings()
+        
+        viewModel.reloadAction()
     }
     
     //MARK: - Private
         
     private func configureBindings() {
-        let input = WeatherViewModel.Input(refreshAction: refreshAction.eraseToAnyPublisher())
-        let bindings = viewModel.bind(input: input)
-                
-        bindings.locationName.assign(to: \.text, on: locationLabel).store(in: &cancellables)
-        bindings.temperature.assign(to: \.text, on: temperatureLabel).store(in: &cancellables)
-        bindings.realFeel.assign(to: \.text, on: realFeelLabel).store(in: &cancellables)
-        bindings.precipitation.assign(to: \.text, on: precipitationLabel).store(in: &cancellables)
-        bindings.updatedAt.assign(to: \.text, on: updatedAtLabel).store(in: &cancellables)
-        bindings.isLoading.map { !$0 }.assign(to: \.isHidden, on: loadingView).store(in: &cancellables)
-        bindings.isLoading.map { !$0 }.assign(to: \.isEnabled, on: refreshButton).store(in: &cancellables)
-        bindings.hasFailed.map { !$0 }.assign(to: \.isHidden, on: errorView).store(in: &cancellables)
+        viewModel.$locationName.assign(to: \.text, on: locationLabel).store(in: &cancellables)
+        viewModel.$temperature.assign(to: \.text, on: temperatureLabel).store(in: &cancellables)
+        viewModel.$realFeel.assign(to: \.text, on: realFeelLabel).store(in: &cancellables)
+        viewModel.$precipitation.assign(to: \.text, on: precipitationLabel).store(in: &cancellables)
+        viewModel.$updatedAt.assign(to: \.text, on: updatedAtLabel).store(in: &cancellables)
+        viewModel.$isLoading.map { !$0 }.assign(to: \.isHidden, on: loadingView).store(in: &cancellables)
+        viewModel.$isLoading.map { !$0 }.assign(to: \.isEnabled, on: refreshButton).store(in: &cancellables)
+        viewModel.$hasFailed.map { !$0 }.assign(to: \.isHidden, on: errorView).store(in: &cancellables)
     }
     
-    private let refreshAction = PassthroughSubject<Void, Never>()
     @IBAction private func refreshAction(_ sender: Any) {
-        refreshAction.send(())
+        viewModel.reloadAction()
     }
     
 }

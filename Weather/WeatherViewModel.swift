@@ -9,124 +9,45 @@
 import Foundation
 import Combine
 
-class WeatherViewModel {
+class WeatherViewModel: ObservableObject {
     
-    struct Input {
-        let refreshAction: AnyPublisher<Void, Never>
-    }
-    struct Output {
-        let locationName: AnyPublisher<String?, Never>
-        let temperature: AnyPublisher<String?, Never>
-        let realFeel: AnyPublisher<String?, Never>
-        let precipitation: AnyPublisher<String?, Never>
-        let updatedAt: AnyPublisher<String?, Never>
-        let isLoading: AnyPublisher<Bool, Never>
-        let hasFailed: AnyPublisher<Bool, Never>
-    }
+    @Published private(set) var locationName: String? = nil
+    @Published private(set) var temperature: String? = nil
+    @Published private(set) var realFeel: String? = nil
+    @Published private(set) var precipitation: String? = nil
+    @Published private(set) var updatedAt: String? = nil
+    @Published private(set) var isLoading: Bool = false
+    @Published private(set) var hasFailed: Bool = false
     
     //MARK: - Vars
     
     
-    let weatherDataService: WeatherDataService
+    private let weatherDataService: WeatherDataService
     
     init(weatherDataService: WeatherDataService) {
         self.weatherDataService = weatherDataService
     }
     
-    private enum WeatherDataEvent {
-        case loading
-        case weatherData(WeatherData)
-        case error
-    }
-    
-    func bind(input: Input) -> Output {
-        let weatherDataEvent = input.refreshAction
-            .prepend(())
-            .setFailureType(to: Never.self)
-            .map { [weatherDataService] _ -> AnyPublisher<WeatherDataEvent, Never> in
-                weatherDataService.fetchWeatherData()
-                    .map { .weatherData($0) }
-                    .prepend(.loading)
-                    .replaceError(with: .error)
-                    .eraseToAnyPublisher()
-            }
-            .switchToLatest()
-            .share()
-            .eraseToAnyPublisher()
+    func reloadAction() {
+        self.isLoading = true
+        weatherDataService.fetchWeatherData { [weak self] weatherData, error in
+            guard let self = self else { return }
+            
+            self.isLoading = false
+            self.hasFailed = weatherData == nil
+            
+            guard let weatherData = weatherData else { return }
+            
+            self.locationName = weatherData.locationName
+            self.temperature = String(format: "%.1f\u{00B0}C", weatherData.temperature)
+            self.realFeel = String(format: "%.1f\u{00B0}C", weatherData.realFeel)
+            self.precipitation = String(format: "%.0f%%", weatherData.precipitation)
 
-        let weatherData = weatherDataEvent
-            .map { event -> AnyPublisher<WeatherData, Never> in
-                switch event {
-                case .weatherData(let data):
-                    return Just(data)
-                        .setFailureType(to: Never.self)
-                        .eraseToAnyPublisher()
-                default:
-                    return Empty(completeImmediately: true, outputType: WeatherData.self, failureType: Never.self)
-                        .eraseToAnyPublisher()
-                }
-            }
-            .switchToLatest()
-            .eraseToAnyPublisher()
-        
-        let locationName = weatherData
-            .map { $0.locationName }
-            .prepend(nil)
-            .eraseToAnyPublisher()
-        
-        let temperature = weatherData
-            .map { String(format: "%.1f\u{00B0}C", $0.temperature) }
-            .prepend(nil)
-            .eraseToAnyPublisher()
-        
-        let realFeel = weatherData
-            .map { String(format: "%.1f\u{00B0}C", $0.realFeel) }
-            .prepend(nil)
-            .eraseToAnyPublisher()
-        
-        let precipitation = weatherData
-            .map { String(format: "%.0f%%", $0.precipitation) }
-            .prepend(nil)
-            .eraseToAnyPublisher()
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .short
-
-        let updatedAt = weatherData
-            .map { dateFormatter.string(from: $0.updatedAt) }
-            .prepend(nil)
-            .eraseToAnyPublisher()
-        
-        let isLoading = weatherDataEvent
-            .map { event -> Bool in
-                switch event {
-                case .loading: return true
-                default: return false
-                }
-            }
-            .eraseToAnyPublisher()
-        
-        let hasFailed = weatherDataEvent
-            .map { event -> Bool in
-                switch event {
-                case .error: return true
-                default: return false
-                }
-            }
-            .eraseToAnyPublisher()
-        
-        let output = Output(
-            locationName: locationName,
-            temperature: temperature,
-            realFeel: realFeel,
-            precipitation: precipitation,
-            updatedAt: updatedAt,
-            isLoading: isLoading,
-            hasFailed: hasFailed
-        )
-                
-        return output
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateStyle = .medium
+            dateFormatter.timeStyle = .short
+            self.updatedAt = dateFormatter.string(from: weatherData.updatedAt)
+        }
     }
     
     //MARK: -
