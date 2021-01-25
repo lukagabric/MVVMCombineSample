@@ -13,11 +13,12 @@ class WeatherViewModel: ObservableObject {
     
     @Published private(set) var locationName: String? = nil
     @Published private(set) var temperature: String? = nil
-    @Published private(set) var realFeel: String? = nil
-    @Published private(set) var precipitation: String? = nil
+    @Published private(set) var upcomingTemperature: String? = nil
     @Published private(set) var updatedAt: String? = nil
     @Published private(set) var isLoading: Bool = false
     @Published private(set) var hasFailed: Bool = false
+    
+    private var cancellables: [AnyCancellable] = []
     
     //MARK: - Vars
     
@@ -30,24 +31,30 @@ class WeatherViewModel: ObservableObject {
     
     func reloadAction() {
         self.isLoading = true
-        weatherDataService.fetchWeatherData { [weak self] weatherData, error in
-            guard let self = self else { return }
+        let currentData = weatherDataService.fetchCurrentWeatherData()
+        let upcomingData = weatherDataService.fetchUpcomingWeatherData()
             
-            self.isLoading = false
-            self.hasFailed = weatherData == nil
-            
-            guard let weatherData = weatherData else { return }
-            
-            self.locationName = weatherData.locationName
-            self.temperature = String(format: "%.1f\u{00B0}C", weatherData.temperature)
-            self.realFeel = String(format: "%.1f\u{00B0}C", weatherData.realFeel)
-            self.precipitation = String(format: "%.0f%%", weatherData.precipitation)
+        Publishers.Zip(currentData, upcomingData)
+            .sink { result in
+            switch result {
+            case .finished: self.hasFailed = false
+            case .failure(_): self.hasFailed = true
+            }
 
+            self.isLoading = false
+        } receiveValue: { [weak self] currentData, upcomingData in
+            guard let self = self else { return }
+
+            self.locationName = currentData.locationName
+            self.temperature = String(format: "%.1f\u{00B0}C", currentData.temperature)
+            self.upcomingTemperature = String(format: "%.1f\u{00B0}C", upcomingData.temperature)
+            
             let dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .medium
             dateFormatter.timeStyle = .short
-            self.updatedAt = dateFormatter.string(from: weatherData.updatedAt)
-        }
+            self.updatedAt = dateFormatter.string(from: currentData.updatedAt)
+
+        }.store(in: &cancellables)
     }
     
     //MARK: -

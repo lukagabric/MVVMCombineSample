@@ -7,18 +7,36 @@
 //
 
 import Foundation
+import Combine
 
 open class WeatherDataService {
     
-    open func fetchWeatherData(callback: @escaping (_ weatherData: WeatherData?, _ error: NSError?) -> Void) {
-        let time = 0.5 + TimeInterval(arc4random_uniform(10)) / 10.0
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + time) {
-            let shouldFail = arc4random_uniform(2) == 0
-            if shouldFail {
-                callback(nil, NSError(domain: "Fake network error", code: 0, userInfo: nil))
-            } else {
-                callback(self.createRandomWeatherData(), nil)
+    open func fetchCurrentWeatherData() -> Future<WeatherData, NSError> {
+        Future { promise in
+            let time = 0.5 + TimeInterval(arc4random_uniform(10)) / 10.0
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + time) {
+                let shouldFail = arc4random_uniform(2) == 0
+                if shouldFail {
+                    promise(.failure(NSError(domain: "Fake network error", code: 0, userInfo: nil)))
+                } else {
+                    promise(.success(self.createRandomWeatherData()))
+                }
+            }
+        }
+    }
+    
+    open func fetchUpcomingWeatherData() -> Future<WeatherData, NSError> {
+        Future { promise in
+            let time = 0.5 + TimeInterval(arc4random_uniform(10)) / 10.0
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + time) {
+                let shouldFail = arc4random_uniform(2) == 0
+                if shouldFail {
+                    promise(.failure(NSError(domain: "Fake network error", code: 0, userInfo: nil)))
+                } else {
+                    promise(.success(self.createRandomWeatherData()))
+                }
             }
         }
     }

@@ -17,8 +17,7 @@ class WeatherViewController: UIViewController {
     @IBOutlet private weak var loadingView: UIView!
     @IBOutlet private weak var locationLabel: UILabel!
     @IBOutlet private weak var temperatureLabel: UILabel!
-    @IBOutlet private weak var realFeelLabel: UILabel!
-    @IBOutlet private weak var precipitationLabel: UILabel!
+    @IBOutlet private weak var upcomingTemperatureLabel: UILabel!
     @IBOutlet private weak var updatedAtLabel: UILabel!
     @IBOutlet private weak var refreshButton: UIButton!
     
@@ -52,8 +51,7 @@ class WeatherViewController: UIViewController {
     private func configureBindings() {
         viewModel.$locationName.assign(to: \.text, on: locationLabel).store(in: &cancellables)
         viewModel.$temperature.assign(to: \.text, on: temperatureLabel).store(in: &cancellables)
-        viewModel.$realFeel.assign(to: \.text, on: realFeelLabel).store(in: &cancellables)
-        viewModel.$precipitation.assign(to: \.text, on: precipitationLabel).store(in: &cancellables)
+        viewModel.$upcomingTemperature.assign(to: \.text, on: upcomingTemperatureLabel).store(in: &cancellables)
         viewModel.$updatedAt.assign(to: \.text, on: updatedAtLabel).store(in: &cancellables)
         viewModel.$isLoading.map { !$0 }.assign(to: \.isHidden, on: loadingView).store(in: &cancellables)
         viewModel.$isLoading.map { !$0 }.assign(to: \.isEnabled, on: refreshButton).store(in: &cancellables)
